@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    body {
+      background-color: #f8f4f0;
+    }
+    .chat-container {
+      max-width: 800px;
+      margin: 0 auto;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .message {
+      max-width: 80%;
+      padding: 14px 18px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+    .user {
+      background-color: #ff6b6b;
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .ai {
+      background-color: #f1f1f1;
+      color: #333;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+  <div class="chat-container bg-white shadow-xl rounded-3xl overflow-hidden flex flex-col">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b bg-white">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-comment-dots text-orange-500 text-xl"></i>
+        </div>
+        <h1 class="text-xl font-semibold text-gray-800">AI Assistant</h1>
+      </div>
+      <button id="newChatBtn"
+        class="px-5 py-2 text-sm font-medium border border-gray-300 rounded-full hover:bg-gray-100 transition">
+        New Chat
+      </button>
+    </div>
+
+    <!-- Chat Area -->
+    <div id="chatArea" class="flex-1 p-6 overflow-y-auto bg-[#f8f4f0] flex flex-col">
+      <!-- Welcome Message -->
+      <div class="flex flex-col items-center justify-center flex-1 text-center py-12">
+        <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-6">
+          <i class="fa-solid fa-comment-dots text-orange-500 text-4xl"></i>
+        </div>
+        <h2 class="text-3xl font-bold text-gray-800 mb-3">How can I help you today?</h2>
+        <p class="text-gray-600 max-w-md">
+          I'm an AI assistant designed to help you learn and build. 
+          Ask me anything, and let's figure it out together.
+        </p>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="p-6 bg-white border-t">
+      <div class="flex gap-3">
+        <input 
+          type="text" 
+          id="userInput"
+          placeholder="Type a message..."
+          class="flex-1 px-6 py-4 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 text-gray-800 placeholder-gray-500"
+          autocomplete="off"
+        >
+        <button id="sendBtn"
+          class="w-14 h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center transition shadow-md">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatArea = document.getElementById('chatArea');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const newChatBtn = document.getElementById('newChatBtn');
+
+    // Send message function
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      // Add user message
+      addMessage(message, 'user');
+      userInput.value = '';
+
+      // Show "Thinking..." message
+      const thinkingId = addMessage("Thinking...", 'ai');
+
+      try {
+        const res = await fetch('http://localhost:3000/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message })
+        });
+
+        const data = await res.json();
+
+        // Remove thinking message and add real AI reply
+        removeMessage(thinkingId);
+        addMessage(data.reply || "Sorry, no response received.", 'ai');
+
+      } catch (error) {
+        removeMessage(thinkingId);
+        addMessage("Sorry, I couldn't connect to the AI. Is your server running?", 'ai');
+        console.error(error);
+      }
+    }
+
+    // Add message to chat
+    function addMessage(text, sender) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${sender}`;
+      messageDiv.textContent = text;
+      messageDiv.id = 'msg-' + Date.now();   // unique id for thinking message
+      chatArea.appendChild(messageDiv);
+      chatArea.scrollTop = chatArea.scrollHeight;
+      return messageDiv.id;
+    }
+
+    // Remove message (used for "Thinking...")
+    function removeMessage(id) {
+      const msg = document.getElementById(id);
+      if (msg) msg.remove();
+    }
+
+    // Event Listeners
+    sendBtn.addEventListener('click', sendMessage);
+
+    userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    newChatBtn.addEventListener('click', () => {
+      chatArea.innerHTML = `
+        <div class="flex flex-col items-center justify-center flex-1 text-center py-12">
+          <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-6">
+            <i class="fa-solid fa-comment-dots text-orange-500 text-4xl"></i>
+          </div>
+          <h2 class="text-3xl font-bold text-gray-800 mb-3">How can I help you today?</h2>
+          <p class="text-gray-600 max-w-md">
+            I'm an AI assistant designed to help you learn and build. 
+            Ask me anything, and let's figure it out together.
+          </p>
+        </div>
+      `;
+    });
+
+    // Allow clicking send button with Enter key already handled
+  </script>
+</body>
+</html>
